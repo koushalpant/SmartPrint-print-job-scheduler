@@ -1,14 +1,7 @@
 import time
 import threading
-from queue import Queue
 import tkinter as tk
 from tkinter import ttk, messagebox
-import customtkinter as ctk
-import tkinter.messagebox as mb
-import ctypes
-
-
-# Job class to represent a print job
 
 class PrintJob:
     def __init__(self, job_id, document_name, num_pages, priority):
@@ -20,9 +13,6 @@ class PrintJob:
 
     def __repr__(self):
         return f"Job[{self.job_id}] - {self.document_name} ({self.num_pages} pages, Priority {self.priority})"
-
-
-# Combined Priority + SJN Scheduler
 
 class PrioritySJNQueue:
     def __init__(self):
@@ -39,9 +29,6 @@ class PrioritySJNQueue:
                 output_callback(f"\tPrinting page {page}/{job.num_pages} of '{job.document_name}'...")
                 time.sleep(0.5)
             output_callback(f"Completed: {job}\n")
-
-
-# Round Robin Scheduling Manager
 
 class RoundRobinPrintQueue:
     def __init__(self, time_slice=10):
@@ -65,153 +52,109 @@ class RoundRobinPrintQueue:
                     if job.num_pages == 0:
                         output_callback(f"Completed: {job}\n")
 
+def start_gui():
+    job_list = []
+    job_counter = [1]
 
-# GUI Interface
-
-ctk.set_appearance_mode("Dark")  
-ctk.set_default_color_theme("dark-blue")
-
-class PrintJob:
-    def __init__(self, job_id, document_name, num_pages, priority):
-        self.job_id = job_id
-        self.document_name = document_name
-        self.num_pages = num_pages
-        self.priority = priority
-
-    def __repr__(self):
-        return f"{self.document_name} ({self.num_pages} pages, P{self.priority})"
-
-class PrintSchedulerApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("🖨️ QuickPrint Scheduler")
-        self.jobs = []
-        self.job_id_counter = 1
-
-        self.configure(padx=20, pady=20)
-        user32 = ctypes.windll.user32
-        screen_width = user32.GetSystemMetrics(0)
-        screen_height = user32.GetSystemMetrics(1)
-        self.geometry(f"{screen_width}x{screen_height}+0+0")
-        self.build_ui()
-        self.state("zoomed")
-
-    def build_ui(self):
-        # Header
-        header = ctk.CTkFrame(self, corner_radius=10)
-        header.pack(fill="x", pady=(0, 10))
-        ctk.CTkLabel(header, text="🖨️ QuickPrint Scheduler", font=ctk.CTkFont(size=24, weight="bold")).pack(side="left", padx=15, pady=15)
-        self.theme_switch = ctk.CTkSwitch(header, text="Light Mode", command=self.toggle_theme)
-        self.theme_switch.pack(side="right", padx=15)
-
-        # Form Frame
-        form = ctk.CTkFrame(self)
-        form.pack(fill="x", pady=10)
-
-        self.doc_name = ctk.CTkEntry(form, placeholder_text="Document Name")
-        self.pages = ctk.CTkEntry(form, placeholder_text="Number of Pages")
-        self.priority = ctk.CTkEntry(form, placeholder_text="Priority (1 = High)")
-
-        self.doc_name.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        self.pages.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        self.priority.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
-
-        form.grid_columnconfigure((0, 1, 2), weight=1)
-
-        self.add_btn = ctk.CTkButton(form, text="➕ Add Job", command=self.add_job)
-        self.add_btn.grid(row=0, column=3, padx=10)
-
-        # Table
-        self.table_frame = ctk.CTkFrame(self)
-        self.table_frame.pack(fill="both", expand=True, pady=10)
-        style = ttk.Style()
-        style.configure("Treeview", font=("Segoe UI", 20), rowheight=32)
-        style.configure("Treeview.Heading", font=("Segoe UI", 25, "bold"))
-
-        self.tree = ttk.Treeview(self.table_frame, columns=("ID", "Name", "Pages", "Priority"), show="headings", height=6)
-        for col in ("ID", "Name", "Pages", "Priority"):
-            self.tree.heading(col, text=col)
-            self.tree.column(col, anchor="center", width=100)
-        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Control Buttons
-        control = ctk.CTkFrame(self)
-        control.pack(fill="x", pady=10)
-
-        self.start_btn = ctk.CTkButton(control, text="▶️ Start Round Robin", command=self.start_printing)
-        self.clear_btn = ctk.CTkButton(control, text="🧹 Clear Jobs", command=self.clear_jobs)
-
-        self.start_btn.pack(side="left", padx=10, pady=10)
-        self.clear_btn.pack(side="left", padx=10, pady=10)
-
-        # Progress & Output
-        self.output_box = ctk.CTkTextbox(self, height=180)
-        self.output_box.pack(fill="both", expand=False, pady=(0, 10))
-
-        self.progress_bar = ctk.CTkProgressBar(self, height=10)
-        self.progress_bar.pack(fill="x")
-        self.progress_bar.set(0)
-
-    def toggle_theme(self):
-
-        if self.theme_switch.get() == 1:
-            ctk.set_appearance_mode("Light")
-            self.theme_switch.configure(text="Dark Mode")
-        else:
-            ctk.set_appearance_mode("Dark")
-            self.theme_switch.configure(text="Light Mode")
-
-    def add_job(self):
-        name = self.doc_name.get()
+    def submit_job():
+        name = doc_name_entry.get()
         try:
-            pages = int(self.pages.get())
-            priority = int(self.priority.get())
+            pages = int(num_pages_entry.get())
+            priority = int(priority_entry.get())
         except ValueError:
-            mb.showerror("Error", "Pages and Priority must be integers.")
+            messagebox.showerror("Invalid Input", "Pages and Priority must be integers")
             return
+        job = PrintJob(job_counter[0], name, pages, priority)
+        job_list.append(job)
+        job_counter[0] += 1
+        job_queue.insert('', 'end', values=(job.job_id, name, pages, priority))
+        doc_name_entry.delete(0, tk.END)
+        num_pages_entry.delete(0, tk.END)
+        priority_entry.delete(0, tk.END)
 
-        job = PrintJob(self.job_id_counter, name, pages, priority)
-        self.jobs.append(job)
-        self.tree.insert('', 'end', values=(job.job_id, job.document_name, job.num_pages, job.priority))
-        self.job_id_counter += 1
+    def process_queue():
+        output_text.delete('1.0', tk.END)
+        algorithm = algorithm_var.get()
 
-        self.doc_name.delete(0, 'end')
-        self.pages.delete(0, 'end')
-        self.priority.delete(0, 'end')
+        if algorithm == "Round Robin":
+            scheduler = RoundRobinPrintQueue()
+        else:
+            scheduler = PrioritySJNQueue()
 
-    def clear_jobs(self):
-        self.jobs.clear()
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        self.output_box.delete("1.0", "end")
-        self.progress_bar.set(0)
+        for job in job_list:
+            scheduler.add_job(job)
 
-    def start_printing(self):
-        if not self.jobs:
-            mb.showinfo("No Jobs", "Add some jobs before starting.")
-            return
+        def run():
+            scheduler.process_jobs(lambda msg: (output_text.insert(tk.END, msg + "\n"), output_text.see(tk.END)))
+        threading.Thread(target=run).start()
 
-        def worker():
-            total_pages = sum(job.num_pages for job in self.jobs)
-            printed_pages = 0
-            time_slice = 5
+    def clear_jobs():
+        job_list.clear()
+        job_queue.delete(*job_queue.get_children())
+        output_text.delete('1.0', tk.END)
+        output_text.insert(tk.END, "All jobs cleared.\n")
 
-            while any(job.num_pages > 0 for job in self.jobs):
-                for job in self.jobs:
-                    if job.num_pages > 0:
-                        pages_to_print = min(time_slice, job.num_pages)
-                        self.output_box.insert("end", f"🖨️ {job.document_name} - Printing {pages_to_print} pages...\n")
-                        self.output_box.see("end")
-                        time.sleep(0.3 * pages_to_print)
-                        job.num_pages -= pages_to_print
-                        printed_pages += pages_to_print
-                        progress = printed_pages / total_pages
-                        self.progress_bar.set(progress)
-                        self.update_idletasks()
+    # --- GUI Setup ---
+    root = tk.Tk()
+    root.title("🖨️ QuickPrint Scheduler")
+    root.state("zoomed")  # Zoomed fullscreen
+    root.configure(bg="#121212")  # Dark background
 
-        threading.Thread(target=worker).start()
+    style = ttk.Style(root)
+    style.theme_use("default")
+    style.configure("Treeview", background="#1e1e1e", foreground="white", fieldbackground="#1e1e1e", rowheight=30)
+    style.configure("Treeview.Heading", background="#333", foreground="white", font=("Helvetica", 10, "bold"))
+    style.map("Treeview", background=[('selected', '#333')])
 
+    title = tk.Label(root, text="QuickPrint Scheduler", font=("Helvetica", 20, "bold"), bg="#121212", fg="white")
+    title.pack(pady=10)
+
+    form_frame = tk.Frame(root, bg="#121212")
+    form_frame.pack(pady=5)
+
+    def dark_entry(master):
+        return tk.Entry(master, bg="#2e2e2e", fg="white", insertbackground="white", relief="flat")
+
+    tk.Label(form_frame, text="Document Name:", bg="#121212", fg="white").grid(row=0, column=0, padx=5, pady=2, sticky='e')
+    tk.Label(form_frame, text="Number of Pages:", bg="#121212", fg="white").grid(row=1, column=0, padx=5, pady=2, sticky='e')
+    tk.Label(form_frame, text="Priority (1=High):", bg="#121212", fg="white").grid(row=2, column=0, padx=5, pady=2, sticky='e')
+
+    doc_name_entry = dark_entry(form_frame)
+    num_pages_entry = dark_entry(form_frame)
+    priority_entry = dark_entry(form_frame)
+    doc_name_entry.grid(row=0, column=1, padx=5)
+    num_pages_entry.grid(row=1, column=1, padx=5)
+    priority_entry.grid(row=2, column=1, padx=5)
+
+    tk.Button(form_frame, text="Add Print Job", command=submit_job, bg="#4CAF50", fg="white").grid(row=3, column=0, columnspan=2, pady=5)
+
+    algo_frame = tk.Frame(root, bg="#121212")
+    algo_frame.pack(pady=5)
+
+    tk.Label(algo_frame, text="Select Scheduling Algorithm:", bg="#121212", fg="white").grid(row=0, column=0, columnspan=2)
+    algorithm_var = tk.StringVar(value="Round Robin")
+    algorithm_menu = ttk.Combobox(algo_frame, textvariable=algorithm_var, state="readonly", values=["Round Robin", "Priority + SJN"])
+    algorithm_menu.grid(row=1, column=0, columnspan=2, pady=5)
+
+    tk.Button(algo_frame, text="Start Scheduling", command=process_queue, bg="#2196F3", fg="white").grid(row=2, column=0, pady=5, padx=5)
+    tk.Button(algo_frame, text="Clear Jobs", command=clear_jobs, bg="#f44336", fg="white").grid(row=2, column=1, pady=5, padx=5)
+
+    job_queue = ttk.Treeview(root, columns=("ID", "Name", "Pages", "Priority"), show='headings', height=10)
+    for col in ("ID", "Name", "Pages", "Priority"):
+        job_queue.heading(col, text=col)
+        job_queue.column(col, anchor="center", width=150)
+    job_queue.pack(pady=10, padx=10, fill="x")
+
+    output_label = tk.Label(root, text="Output Log:", font=("Helvetica", 12, "bold"), bg="#121212", fg="white")
+    output_label.pack()
+
+    output_text = tk.Text(root, height=12, bg="#1e1e1e", fg="white", insertbackground="white", font=("Courier", 10))
+    output_text.pack(pady=5, padx=10, fill="both", expand=True)
+
+    root.mainloop()
+
+# ----------------------------
+# Entry Point
+# ----------------------------
 if __name__ == "__main__":
-    app = PrintSchedulerApp()
-    app.state("zoomed")
-    app.mainloop()
+    start_gui()
